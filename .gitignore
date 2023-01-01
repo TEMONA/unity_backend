@@ -1,0 +1,6 @@
+basicapi/__pycache__/
+basicapi/migrations/__pycache__/
+unityapi/__pycache__/
+media/
+secrets/
+db.sqlite3
