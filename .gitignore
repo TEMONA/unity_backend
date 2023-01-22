@@ -1,5 +1,5 @@
 basicapi/__pycache__/
-basicapi/migrations/__pycache__/
+basicapi/migrations/
 unityapi/__pycache__/
 media/
 secrets/
