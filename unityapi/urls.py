@@ -1,3 +1,4 @@
+
 from django.contrib import admin
 from django.urls import path
 from django.conf.urls import include
@@ -25,7 +26,8 @@ urlpatterns = [
     path('docs/', TemplateView.as_view(
         template_name='swagger-ui.html',
         extra_context={'schema_url': 'openapi-schema'}
-    ), name='swagger-ui')
+    ), name='swagger-ui'),
+    path('kaonavi-api/', include('kaonaviapi.urls')),
 ]
 
 if settings.DEBUG:

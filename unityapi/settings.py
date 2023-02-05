@@ -17,6 +17,9 @@ DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
+KAONAVI_API_KEY = env.str('KAONAVI_API_KEY')
+KAONAVI_API_SECRET = env.str('KAONAVI_API_SECRET')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -26,6 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'basicapi.apps.BasicapiConfig',
+    'kaonaviapi.apps.KaonaviapiConfig',
     'corsheaders',
     'djoser',
 ]
