@@ -35,6 +35,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    kaonavi_code = models.CharField(max_length=10, default='')
 
     objects = UserManager()
 

@@ -9,10 +9,10 @@ class ProfileInline(admin.StackedInline):
 
 class UserAdmin(BaseUserAdmin):
     ordering = ('id',)
-    list_display = ('email', 'id', 'is_active', 'password')
+    list_display = ('email', 'id', 'is_active', 'password', 'kaonavi_code')
     fieldsets = (
         (None, {'fields': ('email', 'password',)}),
-        ('Personal Information', {'fields': ('username',)}),
+        ('Personal Information', {'fields': ('username', 'kaonavi_code')}),
         (
             'Permissions',
             {
