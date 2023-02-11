@@ -1,5 +1,6 @@
 basicapi/__pycache__/
-basicapi/migrations/
+# Migrationは消さない
+# basicapi/migrations/
 unityapi/__pycache__/
 media/
 secrets/
