@@ -12,6 +12,8 @@ root = environ.Path(os.path.join(BASE_DIR, 'secrets'))
 env.read_env(root('.env.dev'))
 
 SECRET_KEY = env.str('SECRET_KEY')
+KAONAVI_API_KEY = env.str('KAONAVI_API_KEY')
+KAONAVI_API_SECRET = env.str('KAONAVI_API_SECRET')
 
 DEBUG = env.bool('DEBUG', default=False)
 

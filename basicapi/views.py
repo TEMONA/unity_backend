@@ -2,28 +2,42 @@ from django.http import HttpResponse
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 from .models import User, Profile
 from .serializers import UserSerializer, ProfileSerializer
 from django.db.models import Q
-
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from datetime import datetime
 from django.shortcuts import redirect
 from django.conf import settings
+from .lib.connector import KaonaviConnector
+
 
 class CreateUserView(CreateAPIView):
     serializer_class = UserSerializer
     permission_classes = (AllowAny,)
 
-class UserView(RetrieveUpdateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+class UsersView(APIView):
+    def get(self, request):
+        response = KaonaviConnector().get_users()
+        if response.is_success():
+            return Response(response.data, status=status.HTTP_200_OK)
+        else:
+            return Response(response.error_messages(), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def get_queryset(self):
-        return self.queryset.filter(id=self.request.user.id)
+class UserView(APIView):
+    def get(self, request, pk):
+        user = User.objects.get(pk=pk)
+        user_id = user.id
+        kaonavi_code = user.kaonavi_code
+        response = KaonaviConnector().get_user(user_id, kaonavi_code)
+        if response.is_success():
+            return Response(response.data, status=status.HTTP_200_OK)
+        else:
+            return Response(response.error_messages(), status=status.HTTP_400_BAD_REQUEST)
 
 # 修正前
 # class ProfileViewSet(ModelViewSet):
