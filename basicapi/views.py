@@ -31,9 +31,8 @@ class UsersView(APIView):
 class UserView(APIView):
     def get(self, request, pk):
         user = User.objects.get(pk=pk)
-        user_id = user.id
         kaonavi_code = user.kaonavi_code
-        response = KaonaviConnector().get_user(user_id, kaonavi_code)
+        response = KaonaviConnector().get_user(user.id, kaonavi_code)
         if response.is_success():
             return Response(response.data, status=status.HTTP_200_OK)
         else:

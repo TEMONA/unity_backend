@@ -5,6 +5,7 @@ from ..models import User
 from .api_result import ApiResult
 
 END_POINT_URL_BASE = 'https://api.kaonavi.jp/api/v2.0'
+SELF_INTRO_SHEET_ID = 19
 
 class KaonaviConnector:
     def __init__(self):
@@ -22,9 +23,7 @@ class KaonaviConnector:
         )
         return response.json()['access_token']
 
-    def get_users(self):
-        """全社員情報取得"""
-
+    def get_kaonavi_users(self):
         response = requests.get(
             f"{END_POINT_URL_BASE}/members",
             data='grant_type=client_credentials',
@@ -33,47 +32,88 @@ class KaonaviConnector:
                 'Kaonavi-Token': self.access_token
             },
         )
+        return response.json()['member_data']
 
-        kaonavi_users = response.json()['member_data']
+    def get_users(self):
+        """全社員情報取得"""
+        kaonavi_users = self.get_kaonavi_users()
         if len(kaonavi_users) >= 1:
             formatted_users = []
             for kaonavi_user in kaonavi_users:
-                formatted_user = self.format_user_data(kaonavi_user)
-                formatted_users.append(formatted_user)
-
+                user = User.objects.get(kaonavi_code=kaonavi_user['code'])
+                departments = kaonavi_user['department']['names']
+                role_list = list(filter(lambda custom_field : custom_field['name'] == '役職', kaonavi_user['custom_fields']))
+                formatted_users.append(
+                    dict(
+                        user_id=user.id,
+                        name=kaonavi_user['name'],
+                        name_kana=kaonavi_user['name_kana'],
+                        headquarters=departments[0] if len(departments) >= 1 else '',
+                        department=departments[1] if len(departments) >= 2 else '',
+                        group=departments[2] if len(departments) >= 3 else '',
+                        role=role_list[0]['values'][0] if role_list else '',
+                        # 業務内容は自己紹介シートから取得する必要があるがまだカオナビ側にデータがないためstay
+                        job_description='job_description'
+                    )
+                )
             return ApiResult(success=True, data=formatted_users)
         else:
             return ApiResult(success=False, errors=['社員情報の取得に失敗しました'])
 
     def get_user(self, user_id, kaonavi_code):
         """カオナビの社員codeに紐づく社員情報取得"""
+        kaonavi_user_list = list(filter(lambda user : user['code'] == kaonavi_code, self.get_kaonavi_users()))
 
-        kaonavi_users = self.get_users().data
-        user = list(filter(lambda user : user['code'] == kaonavi_code, kaonavi_users))
-
-        if len(user) == 1:
-            return ApiResult(success=True, data=user)
+        if len(kaonavi_user_list) == 1:
+            kaonavi_user = kaonavi_user_list[0]
+            departments = kaonavi_user['department']['names']
+            formatted_user = dict(
+                overview=dict(
+                    image='https//path_to_image.com',
+                    name=kaonavi_user['name'],
+                    name_kana=kaonavi_user['name_kana'],
+                    headquarters=departments[0] if len(departments) >= 1 else '',
+                    department=departments[1] if len(departments) >= 2 else '',
+                    group=departments[2] if len(departments) >= 3 else '',
+                ),
+                tags=self.tags(kaonavi_user),
+                details=self.get_self_introduction_sheet(kaonavi_user['code'])
+            )
+            return ApiResult(success=True, data=formatted_user)
         else:
             return ApiResult(success=False, errors=[f"id:{user_id}の社員情報の取得に失敗しました"])
 
-    def format_user_data(self, kaonavi_user):
-        user = User.objects.get(kaonavi_code=kaonavi_user['code'])
-        # 以下の感じでカスタムフィールドの値を取得できる(下手くそ)
-        recruit_category = list(filter(lambda custom_field : custom_field['name'] == '採用区分', kaonavi_user['custom_fields']))[0]['values'][0]
+    def tags(self, kaonavi_user):
+        # 職種、勤続年数、グレード、出社曜日、出身地、採用区分
+        # 職種はカオナビ側で持ってないからtagsに含めない
+        years_of_service = kaonavi_user['years_of_service']
+        # グレードはカオナビ側で持ってない。なので役職(ex.グループ長)を代わりに使う
+        role_list = list(filter(lambda custom_field : custom_field['name'] == '役職', kaonavi_user['custom_fields']))
+        role = '' if len(role_list) == 0 else role_list[0]['values'][0]
+        birth_place = '出身地'
+        recruit_category_list = list(filter(lambda custom_field : custom_field['name'] == '採用区分', kaonavi_user['custom_fields']))
+        recruit_category = recruit_category_list[0]['values'][0] if recruit_category_list else ''
 
-        return dict(
-            user_id=user.id,
-            code=kaonavi_user['code'],
-            name=kaonavi_user['name'],
-            name_kana=kaonavi_user['name_kana'],
-            mail=kaonavi_user['mail'],
-            entered_date=kaonavi_user['entered_date'],
-            gender=kaonavi_user['gender'],
-            birthday=kaonavi_user['birthday'],
-            age=kaonavi_user['age'],
-            years_of_service=kaonavi_user['years_of_service'],
-            department=kaonavi_user['department'],
-            recruit_category=recruit_category,
-            # 現状sub_departmentsのある社員データが存在しないため考慮しない
-            # sub_department=user['sub_departments']['name'],
+        return [
+            years_of_service,
+            role,
+            birth_place,
+            recruit_category
+        ]
+
+    def get_self_introduction_sheet(self, kaonavi_code):
+        sheets = requests.get(
+            f"{END_POINT_URL_BASE}/sheets/{SELF_INTRO_SHEET_ID}",
+            data='grant_type=client_credentials',
+            headers={
+                'Content-Type': 'application/json',
+                'Kaonavi-Token': self.access_token
+            },
         )
+
+        return sheets.json()
+        # # sheet_list = list(filter(lambda sheet : sheet['member_data']['code'] == kaonavi_code, sheets.json()))
+        # if len(sheet_list) == 1:
+        #     return sheet_list[0].json()
+        # else:
+        #     return 'sheetは見つからないよ'
