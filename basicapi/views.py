@@ -13,7 +13,7 @@ from rest_framework.decorators import api_view, permission_classes
 from datetime import datetime
 from django.shortcuts import redirect
 from django.conf import settings
-from .lib.connector import KaonaviConnector
+from .lib.kaonavi.connector import KaonaviConnector
 
 
 class CreateUserView(CreateAPIView):
@@ -22,7 +22,7 @@ class CreateUserView(CreateAPIView):
 
 class UsersView(APIView):
     def get(self, request):
-        response = KaonaviConnector().get_users()
+        response = KaonaviConnector().get_users(request.query_params)
         if response.is_success():
             return Response(response.data, status=status.HTTP_200_OK)
         else:
