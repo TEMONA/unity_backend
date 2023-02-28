@@ -111,9 +111,6 @@ class KaonaviConnector:
             },
         )
 
+        # ここでkaonavi_codeと一致するデータを取得する
+
         return sheets.json()
-        # # sheet_list = list(filter(lambda sheet : sheet['member_data']['code'] == kaonavi_code, sheets.json()))
-        # if len(sheet_list) == 1:
-        #     return sheet_list[0].json()
-        # else:
-        #     return 'sheetは見つからないよ'
