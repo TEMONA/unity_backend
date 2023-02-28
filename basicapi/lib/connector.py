@@ -5,7 +5,7 @@ from ..models import User
 from .api_result import ApiResult
 
 END_POINT_URL_BASE = 'https://api.kaonavi.jp/api/v2.0'
-SELF_INTRO_SHEET_ID = 19
+SELF_INTRO_SHEET_ID = 20
 
 class KaonaviConnector:
     def __init__(self):
@@ -39,6 +39,7 @@ class KaonaviConnector:
         kaonavi_users = self.get_kaonavi_users()
         if len(kaonavi_users) >= 1:
             formatted_users = []
+
             for kaonavi_user in kaonavi_users:
                 user = User.objects.get(kaonavi_code=kaonavi_user['code'])
                 departments = kaonavi_user['department']['names']
@@ -52,8 +53,8 @@ class KaonaviConnector:
                         department=departments[1] if len(departments) >= 2 else '',
                         group=departments[2] if len(departments) >= 3 else '',
                         role=role_list[0]['values'][0] if role_list else '',
-                        # 業務内容は自己紹介シートから取得する必要があるがまだカオナビ側にデータがないためstay
-                        job_description='job_description'
+                        # 未実装だからコメントアウト
+                        # details=self.self_introduction_info(kaonavi_user['code'])
                     )
                 )
             return ApiResult(success=True, data=formatted_users)
@@ -77,7 +78,7 @@ class KaonaviConnector:
                     group=departments[2] if len(departments) >= 3 else '',
                 ),
                 tags=self.tags(kaonavi_user),
-                details=self.get_self_introduction_sheet(kaonavi_user['code'])
+                details=self.self_introduction_info(kaonavi_user['code'])
             )
             return ApiResult(success=True, data=formatted_user)
         else:
@@ -101,7 +102,7 @@ class KaonaviConnector:
             recruit_category
         ]
 
-    def get_self_introduction_sheet(self, kaonavi_code):
+    def self_introduction_info(self, kaonavi_code):
         sheets = requests.get(
             f"{END_POINT_URL_BASE}/sheets/{SELF_INTRO_SHEET_ID}",
             data='grant_type=client_credentials',
@@ -110,7 +111,6 @@ class KaonaviConnector:
                 'Kaonavi-Token': self.access_token
             },
         )
-
         # ここでkaonavi_codeと一致するデータを取得する
 
         return sheets.json()
