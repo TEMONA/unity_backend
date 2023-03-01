@@ -38,6 +38,18 @@ class UserView(APIView):
         else:
             return Response(response.error_messages(), status=status.HTTP_400_BAD_REQUEST)
 
+    def patch(self, request, pk):
+        user = User.objects.get(pk=pk)
+        params = request.data
+        response = KaonaviConnector().create_or_update_user(user, params['contents'])
+
+        if response.is_success:
+            data = dict(user_id=user.id, success=True)
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            data = dict(user_id=user.id, success=False, errors=['データの更新/保存に失敗しました'])
+            return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 # 修正前
 # class ProfileViewSet(ModelViewSet):
 #     queryset = Profile.objects.all()
