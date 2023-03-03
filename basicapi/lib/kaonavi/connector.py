@@ -9,14 +9,14 @@ from .user_filter import UserFilter as KaonaviUserFilter
 END_POINT_URL_BASE = 'https://api.kaonavi.jp/api/v2.0'
 SELF_INTRO_SHEET_ID = 20
 NONE_AS_DEFAULT_VALUE = None
-NAME_FIELD_ID = '284'
-BIRTH_PLACE_FIELD_ID = '286'
-JOB_DESCRIPTION_FIELD_ID = '287'
-CAREER_FIELD_ID = '288'
-HOBBY_FIELD_ID = '289'
-SPECIALTY_FIELD_ID = '290' # 特技
-STRENGTHS_FIELD_ID = '291' # アピールポイント
-MESSAGE_FIELD_ID = '292'
+NAME_FIELD_ID = 284
+BIRTH_PLACE_FIELD_ID = 286
+JOB_DESCRIPTION_FIELD_ID = 287
+CAREER_FIELD_ID = 288
+HOBBY_FIELD_ID = 289
+SPECIALTY_FIELD_ID = 290 # 特技
+STRENGTHS_FIELD_ID = 291 # アピールポイント
+MESSAGE_FIELD_ID = 292
 
 class KaonaviConnector:
     def __init__(self):
@@ -54,7 +54,6 @@ class KaonaviConnector:
                 'Kaonavi-Token': self.access_token
             },
         )
-
         return response.json()
 
     def get_users(self, params):
@@ -62,12 +61,20 @@ class KaonaviConnector:
         kaonavi_users = KaonaviUserFilter(params, self.get_kaonavi_users()).call()
 
         if len(kaonavi_users) >= 1:
+            self_intro_sheets = self.get_self_introduction_sheet()
             formatted_users = []
 
             for kaonavi_user in kaonavi_users:
                 user = User.objects.get(kaonavi_code=kaonavi_user['code'])
                 departments = kaonavi_user['department']['names']
                 role = next((custom_field for custom_field in kaonavi_user['custom_fields'] if custom_field['name'] == '役職'), NONE_AS_DEFAULT_VALUE)
+                my_sheet = next((sheet for sheet in self_intro_sheets['member_data'] if sheet['code'] == kaonavi_user['code']), NONE_AS_DEFAULT_VALUE)
+                if my_sheet is not None:
+                    job_description = next((custom_field for custom_field in my_sheet['records'][0]['custom_fields'] if custom_field['id'] == JOB_DESCRIPTION_FIELD_ID), NONE_AS_DEFAULT_VALUE)
+                    job_description = job_description['values'][0] if job_description is not None else ''
+                else:
+                    job_description = ''
+
                 formatted_users.append(
                     dict(
                         user_id=user.id,
@@ -77,8 +84,7 @@ class KaonaviConnector:
                         department=departments[1] if len(departments) >= 2 else '',
                         group=departments[2] if len(departments) >= 3 else '',
                         role=role['values'][0] if role is not None else '',
-                        # 未実装だからコメントアウト
-                        details=self.self_introduction_info(kaonavi_user['code'])
+                        job_description=job_description
                     )
                 )
             return ApiResult(success=True, data=formatted_users)
@@ -88,7 +94,7 @@ class KaonaviConnector:
     def get_user(self, user_id, kaonavi_code):
         """カオナビの社員codeに紐づく社員情報取得"""
         kaonavi_user = next((kaonavi_user for kaonavi_user in self.get_kaonavi_users() if kaonavi_user['code'] == kaonavi_code), NONE_AS_DEFAULT_VALUE)
-        if kaonavi_user is NONE_AS_DEFAULT_VALUE:
+        if kaonavi_user is None:
             return ApiResult(success=False, errors=[f"id:{user_id}の社員情報の取得に失敗しました"])
         else:
             departments = kaonavi_user['department']['names']
@@ -102,7 +108,7 @@ class KaonaviConnector:
                     group=departments[2] if len(departments) >= 3 else '',
                 ),
                 tags=self.tags(kaonavi_user),
-                details=self.self_introduction_info(kaonavi_user['code'])
+                details=self.self_introduction_info(kaonavi_user)
             )
             return ApiResult(success=True, data=formatted_user)
 
@@ -121,50 +127,40 @@ class KaonaviConnector:
             gender
         ]
 
-    def self_introduction_info(self, kaonavi_code):
+    def self_introduction_info(self, kaonavi_user):
         sheets = self.get_self_introduction_sheet()
-        my_sheet = next((sheet for sheet in sheets['member_data'] if sheet['code'] == kaonavi_code), NONE_AS_DEFAULT_VALUE)
+        my_sheet = next((sheet for sheet in sheets['member_data'] if sheet['code'] == kaonavi_user['code']), NONE_AS_DEFAULT_VALUE)
         data = dict(
-            job_description=dict(
-                title='業務内容、役割',
-                value=''
-            ),
-            birth_place=dict(
-                title='出身地',
-                value=''
-            ),
-            career=dict(
-                title='経歴、職歴',
-                value=''
-            ),
-            hobby=dict(
-                title='趣味',
-                value=''
-            ),
-            specialty=dict(
-                title='特技',
-                value=''
-            ),
-            strengths=dict(
-                title='アピールポイント',
-                value=''
-            ),
-            message=dict(
-                title='最後にひとこと',
-                value=''
-            )
+            job_description=dict(title='業務内容、役割', value=''),
+            birth_place=dict(title='出身地', value=''),
+            career=dict(title='経歴、職歴', value=''),
+            hobby=dict(title='趣味', value=''),
+            specialty=dict(title='特技', value=''),
+            strengths=dict(title='アピールポイント', value=''),
+            message=dict(title='最後にひとこと', value='')
         )
 
-        if my_sheet is NONE_AS_DEFAULT_VALUE:
+        if my_sheet is None:
             return data
         else:
-            data['job_description']['value'] = 'ここに自分のシートの業務内容を入れたい'
-            data['birth_place']['value'] = 'ここに自分のシートの出身地を入れたい'
-            data['career']['value'] = 'ここに自分のシートの経歴を入れたい'
-            data['hobby']['value'] = 'ここに自分のシートの趣味を入れたい'
-            data['specialty']['value'] = 'ここに自分のシートの特技を入れたい'
-            data['strengths']['value'] = 'ここに自分のシートのアピールポイントを入れたい'
-            data['message']['value'] = 'ここに自分のシートの最後にひとことを入れたい'
+            custom_fields = my_sheet['records'][0]['custom_fields']
+            # Pythonにswitch文無いんだ、他にいい書き方ないかな
+            for custom_field in custom_fields:
+                custom_field_value = custom_field['values'][0]
+                if custom_field['id'] == JOB_DESCRIPTION_FIELD_ID:
+                    data['job_description']['value'] = custom_field_value
+                elif custom_field['id'] == BIRTH_PLACE_FIELD_ID:
+                    data['birth_place']['value'] = custom_field_value
+                elif custom_field['id'] == CAREER_FIELD_ID:
+                    data['career']['value'] = custom_field_value
+                elif custom_field['id'] == HOBBY_FIELD_ID:
+                    data['hobby']['value'] = custom_field_value
+                elif custom_field['id'] == SPECIALTY_FIELD_ID:
+                    data['specialty']['value'] = custom_field_value
+                elif custom_field['id'] == STRENGTHS_FIELD_ID:
+                    data['strengths']['value'] = custom_field_value
+                elif custom_field['id'] == MESSAGE_FIELD_ID:
+                    data['message']['value'] = custom_field_value
             return data
 
     def create_or_update_user(self, user, params):
@@ -172,11 +168,11 @@ class KaonaviConnector:
         sheets = self.get_self_introduction_sheet()
         my_sheet = next((sheet for sheet in sheets['member_data'] if sheet['code'] == user.kaonavi_code), NONE_AS_DEFAULT_VALUE)
         if my_sheet is NONE_AS_DEFAULT_VALUE:
-            # 自己紹介シートを未作成の場合
+            # 自己紹介シート未作成の場合は新規作成
             method = 'POST'
             url = f"{END_POINT_URL_BASE}/sheets/{SELF_INTRO_SHEET_ID}/add"
         else:
-            # 既に自己紹介シートを作成済の場合
+            # 既に自己紹介シート作成済の場合は更新
             method = 'PATCH'
             url = f"{END_POINT_URL_BASE}/sheets/{SELF_INTRO_SHEET_ID}"
 
