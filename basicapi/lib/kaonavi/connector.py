@@ -163,11 +163,12 @@ class KaonaviConnector:
                     data['message']['value'] = custom_field_value
             return data
 
-    def create_or_update_user(self, user, params):
-        request_json = self.build_create_or_update_user_json(user, params)
+    def create_or_update_self_introduction_info(self, user, params):
         sheets = self.get_self_introduction_sheet()
         my_sheet = next((sheet for sheet in sheets['member_data'] if sheet['code'] == user.kaonavi_code), NONE_AS_DEFAULT_VALUE)
-        if my_sheet is NONE_AS_DEFAULT_VALUE:
+        request_json = self.build_self_introduction_json(user, params)
+
+        if my_sheet is None:
             # 自己紹介シート未作成の場合は新規作成
             method = 'POST'
             url = f"{END_POINT_URL_BASE}/sheets/{SELF_INTRO_SHEET_ID}/add"
@@ -192,7 +193,7 @@ class KaonaviConnector:
         else:
             return ApiResult(success=False)
 
-    def build_create_or_update_user_json(self, user, params):
+    def build_self_introduction_json(self, user, params):
         obj = {
             "member_data": [
                 {

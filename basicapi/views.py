@@ -41,7 +41,7 @@ class UserView(APIView):
     def patch(self, request, pk):
         user = User.objects.get(pk=pk)
         params = request.data
-        response = KaonaviConnector().create_or_update_user(user, params['contents'])
+        response = KaonaviConnector().create_or_update_self_introduction_info(user, params['contents'])
 
         if response.is_success:
             data = dict(user_id=user.id, success=True)
