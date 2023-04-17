@@ -13,7 +13,7 @@ from rest_framework.decorators import api_view, permission_classes
 from datetime import datetime
 from django.shortcuts import redirect
 from django.conf import settings
-from .lib.connector import KaonaviConnector
+from .lib.kaonavi.connector import KaonaviConnector
 
 
 class CreateUserView(CreateAPIView):
@@ -22,7 +22,7 @@ class CreateUserView(CreateAPIView):
 
 class UsersView(APIView):
     def get(self, request):
-        response = KaonaviConnector().get_users()
+        response = KaonaviConnector().get_users(request.query_params)
         if response.is_success():
             return Response(response.data, status=status.HTTP_200_OK)
         else:
@@ -31,13 +31,24 @@ class UsersView(APIView):
 class UserView(APIView):
     def get(self, request, pk):
         user = User.objects.get(pk=pk)
-        user_id = user.id
         kaonavi_code = user.kaonavi_code
-        response = KaonaviConnector().get_user(user_id, kaonavi_code)
+        response = KaonaviConnector().get_user(user.id, kaonavi_code)
         if response.is_success():
             return Response(response.data, status=status.HTTP_200_OK)
         else:
             return Response(response.error_messages(), status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk):
+        user = User.objects.get(pk=pk)
+        params = request.data
+        response = KaonaviConnector().create_or_update_self_introduction_info(user, params['contents'])
+
+        if response.is_success:
+            data = dict(user_id=user.id, success=True)
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            data = dict(user_id=user.id, success=False, errors=['データの更新/保存に失敗しました'])
+            return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # 修正前
 # class ProfileViewSet(ModelViewSet):
