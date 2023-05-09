@@ -77,8 +77,7 @@ def publish_activate_token(sender, instance, **kwargs):
             expired_at=datetime.now()+timedelta(days=settings.ACTIVATION_EXPIRED_DAYS),
         )
         subject = 'Please Activate Your Account'
-        #!今回paymentは関係ないので変更
-        message = f'URLにアクセスして決済を完了してください。\n {settings.MY_URL}/api/users/{user_activate_token.token_id}/payment/'
+        message = f'URLにアクセスしてアカウント登録を完了してください。\n {settings.MY_URL}/api/users/{user_activate_token.token_id}'
     if instance.is_active:
         subject = 'Activated! Your Account!'
         message = 'ユーザーが使用できるようになりました'
