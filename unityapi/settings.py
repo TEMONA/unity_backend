@@ -83,6 +83,26 @@ AUTH_USER_MODEL = 'basicapi.User'
 
 ACTIVATION_EXPIRED_DAYS = 3
 
+# SendGrid
+#本番環境用
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_HOST_USER = 'xxx@gmail.com'
+# EMAIL_HOST_PASSWORD = 'xxx'
+# EMAIL_USE_TLS = True
+# DEFAULT_FROM_EMAIL = 'xxx@gmail.com'
+# SENDGRID_SANDBOX_MODE_IN_DEBUG = False
+# SENDGRID_TRACK_CLICKS_PLAIN = False
+
+#ローカル確認用
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+SENDGRID_API_KEY = env('SENDGRID_API_KEY')
+SENDGRID_SANDBOX_MODE_IN_DEBUG = True
+SENDGRID_TRACK_CLICKS_PLAIN = False
+SENDGRID_ECHO_TO_STDOUT = True
+
 DATABASES = {
     'default': env.db(),
 }
