@@ -7,17 +7,38 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
 root = environ.Path(os.path.join(BASE_DIR, 'secrets'))
-
 # env.read_env(root('.env.prod'))
-env.read_env(root('.env.dev'))
+# env.read_env(root('.env.dev'))
+env.read_env(root('.env'))
 
 SECRET_KEY = env.str('SECRET_KEY')
+
 KAONAVI_API_KEY = env.str('KAONAVI_API_KEY')
 KAONAVI_API_SECRET = env.str('KAONAVI_API_SECRET')
 
 DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
+CORS_ORIGIN_WHITELIST = env.list('CORS_ORIGIN_WHITELIST', default=[])
+
+# 本番環境用
+# LOGGING = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "formatters": {"simple": {"format": "%(asctime)s [%(levelname)s] %(message)s"}},
+#     "handlers": {
+#         "file": {
+#             "level": "INFO",
+#             "class": "logging.FileHandler",
+#             "filename": "/var/log/django/app.log",
+#             "formatter": "simple",
+#         },
+#     },
+#     "loggers": {
+#         "django": {"handlers": ["file"], "level": "INFO", "propagate": False,},
+#         "": {"handlers": ["file"], "level": "INFO", "propagate": False,},
+#     },
+# }
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -42,8 +63,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 ]
-
-CORS_ORIGIN_WHITELIST = env.list('CORS_ORIGIN_WHITELIST', default=[])
 
 ROOT_URLCONF = 'unityapi.urls'
 
@@ -104,7 +123,10 @@ SENDGRID_TRACK_CLICKS_PLAIN = False
 SENDGRID_ECHO_TO_STDOUT = True
 
 DATABASES = {
-    'default': env.db(),
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': env.str('DB_NAME'),
+    }
 }
 
 AUTH_PASSWORD_VALIDATORS = [
