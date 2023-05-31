@@ -114,18 +114,21 @@ class KaonaviConnector:
 
     def tags(self, kaonavi_user):
         years_of_service = f"勤続{kaonavi_user['years_of_service']}"
-        role = next((custom_field for custom_field in kaonavi_user['custom_fields'] if custom_field['name'] == '役職'), NONE_AS_DEFAULT_VALUE)
-        role = f"役職：{role['values'][0]}" if role is not None else ''
-        recruit_category = next((custom_field for custom_field in kaonavi_user['custom_fields'] if custom_field['name'] == '採用区分'), NONE_AS_DEFAULT_VALUE)
-        recruit_category = recruit_category['values'][0] if recruit_category is not None else ''
+        _role = next((custom_field for custom_field in kaonavi_user['custom_fields'] if custom_field['name'] == '役職'), NONE_AS_DEFAULT_VALUE)
+        role = f"役職：{_role['values'][0]}" if _role is not None else None
+        _recruit_category = next((custom_field for custom_field in kaonavi_user['custom_fields'] if custom_field['name'] == '採用区分'), NONE_AS_DEFAULT_VALUE)
+        recruit_category = _recruit_category['values'][0] if _recruit_category is not None else None
         gender = kaonavi_user['gender']
 
-        return [
-            years_of_service,
-            role,
-            recruit_category,
-            gender
-        ]
+        _tags = dict(
+            years_of_service=years_of_service,
+            role=role,
+            recruit_category=recruit_category,
+            gender=gender
+        )
+
+        # Noneのものは返り値に含めない
+        return [value for value in _tags.values() if value is not None]
 
     def self_introduction_info(self, kaonavi_user):
         sheets = self.get_self_introduction_sheet()
