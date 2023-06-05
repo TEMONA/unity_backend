@@ -38,6 +38,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     kaonavi_code = models.CharField(max_length=10, unique=True)
+    chatwork_id = models.CharField(max_length=50, unique=True, null=True)
 
     objects = UserManager()
 
