@@ -134,6 +134,7 @@ SENDGRID_API_KEY = env('SENDGRID_API_KEY')
 SENDGRID_SANDBOX_MODE_IN_DEBUG = True
 SENDGRID_TRACK_CLICKS_PLAIN = False
 SENDGRID_ECHO_TO_STDOUT = True
+MY_URL = env.str('MY_URL', default='http://localhost:8000')
 
 DATABASES = {
     'default': {
