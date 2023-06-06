@@ -5,8 +5,8 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework import status
-from .models import User, Profile
-from .serializers import UserSerializer, ProfileSerializer
+from .models import User, Profile, LunchRequests
+from .serializers import UserSerializer, ProfileSerializer, LunchRequestsSerializer
 from django.db.models import Q
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -50,15 +50,6 @@ class UserView(APIView):
             data = dict(user_id=user.id, success=False, errors=['データの更新/保存に失敗しました'])
             return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# 修正前
-# class ProfileViewSet(ModelViewSet):
-#     queryset = Profile.objects.all()
-#     serializer_class = ProfileSerializer
-
-#     def get_queryset(self):
-#         return self.queryset.filter(user=self.request.user)
-
-# 修正後。これでプライマリーキーを指定すれば取れるようになった。
 class ProfileViewSet(ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
@@ -81,3 +72,21 @@ class MyProfileListView(RetrieveUpdateAPIView):
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
+
+class LunchRequestsViewSet(ModelViewSet):
+    queryset = LunchRequests.objects.all()
+    serializer_class = LunchRequestsSerializer
+
+    def get_queryset(self):
+        return self.queryset
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+class MyLunchRequestsListView(RetrieveUpdateAPIView):
+    queryset = LunchRequests.objects.all()
+    serializer_class = LunchRequestsSerializer
+
+    def get_queryset(self):
+        user_id = self.kwargs['pk']
+        return self.queryset.filter(applicant=user_id)

@@ -146,3 +146,15 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.nickname
+
+class LunchRequests(models.Model):
+
+    applicant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    recipient_calender_uid = models.CharField(max_length=255)
+    apply_content = models.CharField(max_length=255)
+    preferred_days = models.JSONField()
+    created_at = models.DateTimeField(verbose_name="登録日時", auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name="更新日時", auto_now=True, blank=True, null=True)
+
+    def __str__(self):
+        return str(self.applicant) + ' --- send to ---> ' + str(self.recipient_calender_uid)
