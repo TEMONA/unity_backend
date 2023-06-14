@@ -60,10 +60,11 @@ class KaonaviConnector:
         """全社員情報取得"""
         kaonavi_users = KaonaviUserFilter(params, self.get_kaonavi_users()).call()
 
-        if len(kaonavi_users) >= 1:
+        if len(kaonavi_users) == 0:
+            return ApiResult(success=True, data=[])
+        else:
             self_intro_sheets = self.get_self_introduction_sheet()
             formatted_users = []
-
             for kaonavi_user in kaonavi_users:
                 user = User.objects.get(kaonavi_code=kaonavi_user['code'])
                 departments = kaonavi_user['department']['names']
@@ -79,6 +80,7 @@ class KaonaviConnector:
                     dict(
                         user_id=user.id,
                         chatwork_id=user.chatwork_id,
+                        email=user.email,
                         name=kaonavi_user['name'],
                         name_kana=kaonavi_user['name_kana'],
                         headquarters=departments[0] if len(departments) >= 1 else '',
@@ -89,8 +91,6 @@ class KaonaviConnector:
                     )
                 )
             return ApiResult(success=True, data=formatted_users)
-        else:
-            return ApiResult(success=False, errors=['社員情報の取得に失敗しました'])
 
     def get_user(self, user_id, kaonavi_code):
         """カオナビの社員codeに紐づく社員情報取得"""
@@ -103,9 +103,10 @@ class KaonaviConnector:
             formatted_user = dict(
                 overview=dict(
                     image='https//path_to_image.com',
+                    email=user.email,
                     name=kaonavi_user['name'],
-                    chatwork_id=user.chatwork_id,
                     name_kana=kaonavi_user['name_kana'],
+                    chatwork_id=user.chatwork_id,
                     headquarters=departments[0] if len(departments) >= 1 else '',
                     department=departments[1] if len(departments) >= 2 else '',
                     group=departments[2] if len(departments) >= 3 else '',
