@@ -9,7 +9,6 @@ from .user_filter import UserFilter as KaonaviUserFilter
 END_POINT_URL_BASE = 'https://api.kaonavi.jp/api/v2.0'
 SELF_INTRO_SHEET_ID = 20
 NONE_AS_DEFAULT_VALUE = None
-NAME_FIELD_ID = 284
 BIRTH_PLACE_FIELD_ID = 286
 JOB_DESCRIPTION_FIELD_ID = 287
 CAREER_FIELD_ID = 288
@@ -198,7 +197,8 @@ class KaonaviConnector:
         if response.ok:
             return ApiResult(success=True)
         else:
-            return ApiResult(success=False)
+            errors = response.json()['errors']
+            return ApiResult(success=False, errors=errors)
 
     def build_self_introduction_json(self, user, params):
         obj = {
@@ -208,7 +208,6 @@ class KaonaviConnector:
                     "records": [
                         {
                             "custom_fields": [
-                                {"id": NAME_FIELD_ID, "values": [user.username]},
                                 {"id": BIRTH_PLACE_FIELD_ID, "values": [params['birth_place']]},
                                 {"id": JOB_DESCRIPTION_FIELD_ID, "values": [params['job_description']]},
                                 {"id": CAREER_FIELD_ID, "values": [params['career']]},

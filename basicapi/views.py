@@ -43,11 +43,11 @@ class UserView(APIView):
         params = request.data
         response = KaonaviConnector().create_or_update_self_introduction_info(user, params['contents'])
 
-        if response.is_success:
+        if response.is_success():
             data = dict(user_id=user.id, success=True)
             return Response(data, status=status.HTTP_200_OK)
         else:
-            data = dict(user_id=user.id, success=False, errors=['データの更新/保存に失敗しました'])
+            data = dict(user_id=user.id, success=False, errors=response.errors)
             return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ProfileViewSet(ModelViewSet):
