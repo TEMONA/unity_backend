@@ -198,7 +198,8 @@ class KaonaviConnector:
         if response.ok:
             return ApiResult(success=True)
         else:
-            return ApiResult(success=False)
+            errors = response.json()['errors']
+            return ApiResult(success=False, errors=errors)
 
     def build_self_introduction_json(self, user, params):
         obj = {
