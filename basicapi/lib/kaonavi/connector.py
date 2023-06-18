@@ -25,8 +25,8 @@ class KaonaviConnector:
         response = requests.post(
             f"{END_POINT_URL_BASE}/token",
             auth=HTTPBasicAuth(
-                getattr(settings, 'KAONAVI_API_KEY', None),
-                getattr(settings, 'KAONAVI_API_SECRET', None),
+                settings.KAONAVI_API_KEY,
+                settings.KAONAVI_API_SECRET,
             ),
             data='grant_type=client_credentials',
             headers={'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
@@ -77,6 +77,7 @@ class KaonaviConnector:
 
                 formatted_users.append(
                     dict(
+                        image=self.get_image(user.username),
                         user_id=user.id,
                         chatwork_id=user.chatwork_id,
                         email=user.email,
@@ -101,7 +102,7 @@ class KaonaviConnector:
             departments = kaonavi_user['department']['names']
             formatted_user = dict(
                 overview=dict(
-                    image='https//path_to_image.com',
+                    image=self.get_image(user.username),
                     email=user.email,
                     name=kaonavi_user['name'],
                     name_kana=kaonavi_user['name_kana'],
@@ -114,6 +115,16 @@ class KaonaviConnector:
                 details=self.self_introduction_info(kaonavi_user)
             )
             return ApiResult(success=True, data=formatted_user)
+
+    def get_image(self, username):
+        image_url = settings.STORAGE_CLIENT.generate_presigned_url('get_object',
+            Params={
+                'Bucket': settings.AWS_S3_BUCKET_NAME,
+                'Key': f"all-profile-images/{username}.jpg"
+            },
+            ExpiresIn=settings.AWS_S3_EXPIRES_IN)
+
+        return image_url
 
     def tags(self, kaonavi_user):
         years_of_service = f"勤続{kaonavi_user['years_of_service']}"
