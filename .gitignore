@@ -8,3 +8,4 @@ secrets/
 db.sqlite3
 settings.py.backup
 unity_dev_db
+unity_prod_db
