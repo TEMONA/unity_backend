@@ -1,6 +1,7 @@
 import json
 from django.conf import settings
 import requests
+from botocore.exceptions import ClientError
 from requests.auth import HTTPBasicAuth
 from ...models import User
 from ..api_result import ApiResult
@@ -77,7 +78,7 @@ class KaonaviConnector:
 
                 formatted_users.append(
                     dict(
-                        image=self.get_image(user.username),
+                        image=self.get_profile_image_path(user.username),
                         user_id=user.id,
                         chatwork_id=user.chatwork_id,
                         email=user.email,
@@ -102,7 +103,7 @@ class KaonaviConnector:
             departments = kaonavi_user['department']['names']
             formatted_user = dict(
                 overview=dict(
-                    image=self.get_image(user.username),
+                    image=self.get_profile_image_path(user.username),
                     email=user.email,
                     name=kaonavi_user['name'],
                     name_kana=kaonavi_user['name_kana'],
@@ -116,15 +117,37 @@ class KaonaviConnector:
             )
             return ApiResult(success=True, data=formatted_user)
 
-    def get_image(self, username):
-        image_url = settings.STORAGE_CLIENT.generate_presigned_url('get_object',
-            Params={
-                'Bucket': settings.AWS_S3_BUCKET_NAME,
-                'Key': f"all-profile-images/{username}.jpg"
-            },
+    def get_profile_image_path(self, username):
+        '''
+        S3に格納されたその社員のプロフィール画像の絶対パス(https:xxx.jpg)を返す
+        S3にその社員のプロフィール画像が存在しない場合はno-image画像の絶対パスを返す
+        '''
+        s3_client = settings.STORAGE_CLIENT
+        params={
+            'Bucket': settings.AWS_S3_BUCKET_NAME,
+            'Key': f"all-profile-images/{username}.jpg"
+        }
+
+        if self.is_profile_image_exist(s3_client, params) == False:
+            params['Key'] = 'all-profile-images/no-image.jpg'
+
+        image_url = s3_client.generate_presigned_url('get_object',
+            Params=params,
             ExpiresIn=settings.AWS_S3_EXPIRES_IN)
 
         return image_url
+
+    def is_profile_image_exist(self, s3_client, params):
+        '''
+        S3にその社員のプロフィール画像が存在するかを確認する
+        存在している場合はTrue、存在しない場合はFalseを返す
+        '''
+        try:
+            s3_client.head_object(Bucket=params['Bucket'], Key=params['Key'])
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                return False
 
     def tags(self, kaonavi_user):
         years_of_service = f"勤続{kaonavi_user['years_of_service']}"
