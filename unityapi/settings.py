@@ -2,6 +2,7 @@ from pathlib import Path
 import environ
 from datetime import timedelta
 import os
+import boto3
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -16,10 +17,34 @@ SECRET_KEY = env.str('SECRET_KEY')
 KAONAVI_API_KEY = env.str('KAONAVI_API_KEY')
 KAONAVI_API_SECRET = env.str('KAONAVI_API_SECRET')
 
+AWS_ACCESS_KEY_ID = env.str('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = env.str('AWS_SECRET_ACCESS_KEY')
+AWS_S3_BUCKET_NAME = env.str('AWS_S3_BUCKET_NAME')
+AWS_S3_REGION_NAME = env.str('AWS_S3_REGION_NAME')
+AWS_S3_EXPIRES_IN = env.int('AWS_S3_EXPIRES_IN')
+
+STORAGE_CLIENT = boto3.client('s3',
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name=AWS_S3_REGION_NAME)
+
 DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 CORS_ORIGIN_WHITELIST = env.list('CORS_ORIGIN_WHITELIST', default=[])
+
+CORS_ALLOW_HEADERS = (
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'access-control-allow-origin',
+)
 
 # 本番環境用
 # LOGGING = {
@@ -121,6 +146,7 @@ SENDGRID_API_KEY = env('SENDGRID_API_KEY')
 SENDGRID_SANDBOX_MODE_IN_DEBUG = True
 SENDGRID_TRACK_CLICKS_PLAIN = False
 SENDGRID_ECHO_TO_STDOUT = True
+MY_URL = env.str('MY_URL', default='http://localhost:8000')
 
 DATABASES = {
     'default': {

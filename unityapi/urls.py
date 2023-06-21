@@ -14,8 +14,8 @@ urlpatterns = [
     path('authen/', include('djoser.urls')),
     path('authen/', include('djoser.urls.jwt')),
     path('openapi-schema/', get_schema_view(
-        title="title",
-        description="title",
+        title="UnityAPI仕様書",
+        description="テモナ社内アプリ'Unity'のAPI仕様書",
         version="1.0.0",
         public=True,
         # urlconf='basicapi.urls',

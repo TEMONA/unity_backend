@@ -1,6 +1,7 @@
 import json
 from django.conf import settings
 import requests
+from botocore.exceptions import ClientError
 from requests.auth import HTTPBasicAuth
 from ...models import User
 from ..api_result import ApiResult
@@ -9,7 +10,6 @@ from .user_filter import UserFilter as KaonaviUserFilter
 END_POINT_URL_BASE = 'https://api.kaonavi.jp/api/v2.0'
 SELF_INTRO_SHEET_ID = 20
 NONE_AS_DEFAULT_VALUE = None
-NAME_FIELD_ID = 284
 BIRTH_PLACE_FIELD_ID = 286
 JOB_DESCRIPTION_FIELD_ID = 287
 CAREER_FIELD_ID = 288
@@ -23,11 +23,16 @@ class KaonaviConnector:
         self.access_token = self.get_access_token()
 
     def get_access_token(self):
+        '''
+        カオナビAPIのアクセストークンを取得する
+        カオナビAPIにアクセスするには毎回このトークンをリクエストヘッダーに含める必要がある
+        [POST] /token
+        '''
         response = requests.post(
             f"{END_POINT_URL_BASE}/token",
             auth=HTTPBasicAuth(
-                getattr(settings, 'KAONAVI_API_KEY', None),
-                getattr(settings, 'KAONAVI_API_SECRET', None),
+                settings.KAONAVI_API_KEY,
+                settings.KAONAVI_API_SECRET,
             ),
             data='grant_type=client_credentials',
             headers={'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
@@ -35,6 +40,10 @@ class KaonaviConnector:
         return response.json()['access_token']
 
     def get_kaonavi_users(self):
+        '''
+        カオナビに登録されている社員情報一覧を取得する
+        [GET] /members
+        '''
         response = requests.get(
             f"{END_POINT_URL_BASE}/members",
             data='grant_type=client_credentials',
@@ -46,6 +55,10 @@ class KaonaviConnector:
         return response.json()['member_data']
 
     def get_self_introduction_sheet(self):
+        '''
+        カオナビに登録されている自己紹介シートを取得する
+        [GET] /sheets/:sheet_id
+        '''
         response = requests.get(
             f"{END_POINT_URL_BASE}/sheets/{SELF_INTRO_SHEET_ID}",
             data='grant_type=client_credentials',
@@ -57,13 +70,22 @@ class KaonaviConnector:
         return response.json()
 
     def get_users(self, params):
-        """全社員情報取得"""
+        '''
+        カオナビ上に登録されている社員情報一覧を取得したのちに、
+        djangoアプリ上のDBに保存されているユーザーと突合させてカオナビ上にある社員情報とDBに保存しているユーザー(社員)情報を併せて返却する
+        kaonavi_user → カオナビ上の社員データ
+        以下のようにgetでDBに問い合わせしているため、
+        user = User.objects.get(kaonavi_code=kaonavi_user['code'])
+        カオナビ上に存在するが、djangoのDBに存在しないという場合にはエラーになる。
+        どちらにも存在する前提としている。
+        '''
         kaonavi_users = KaonaviUserFilter(params, self.get_kaonavi_users()).call()
 
-        if len(kaonavi_users) >= 1:
+        if len(kaonavi_users) == 0:
+            return ApiResult(success=True, data=[])
+        else:
             self_intro_sheets = self.get_self_introduction_sheet()
             formatted_users = []
-
             for kaonavi_user in kaonavi_users:
                 user = User.objects.get(kaonavi_code=kaonavi_user['code'])
                 departments = kaonavi_user['department']['names']
@@ -77,7 +99,10 @@ class KaonaviConnector:
 
                 formatted_users.append(
                     dict(
+                        image=self.get_profile_image_path(user.username),
                         user_id=user.id,
+                        chatwork_id=user.chatwork_id,
+                        email=user.email,
                         name=kaonavi_user['name'],
                         name_kana=kaonavi_user['name_kana'],
                         headquarters=departments[0] if len(departments) >= 1 else '',
@@ -88,21 +113,26 @@ class KaonaviConnector:
                     )
                 )
             return ApiResult(success=True, data=formatted_users)
-        else:
-            return ApiResult(success=False, errors=['社員情報の取得に失敗しました'])
 
     def get_user(self, user_id, kaonavi_code):
-        """カオナビの社員codeに紐づく社員情報取得"""
+        '''
+        引数で受け取るUser.kaonavi_codeを元にカオナビ上の社員情報一覧から、該当の社員情報を取得する
+        引数のkaonavi_codeの社員情報がカオナビ上に存在しない場合は500エラーを返す(存在する前提)
+        タグや自己紹介シートの値などもカオナビ上から取得してレスポンスに含めてる
+        '''
         kaonavi_user = next((kaonavi_user for kaonavi_user in self.get_kaonavi_users() if kaonavi_user['code'] == kaonavi_code), NONE_AS_DEFAULT_VALUE)
         if kaonavi_user is None:
             return ApiResult(success=False, errors=[f"id:{user_id}の社員情報の取得に失敗しました"])
         else:
+            user = User.objects.get(kaonavi_code=kaonavi_user['code'])
             departments = kaonavi_user['department']['names']
             formatted_user = dict(
                 overview=dict(
-                    image='https//path_to_image.com',
+                    image=self.get_profile_image_path(user.username),
+                    email=user.email,
                     name=kaonavi_user['name'],
                     name_kana=kaonavi_user['name_kana'],
+                    chatwork_id=user.chatwork_id,
                     headquarters=departments[0] if len(departments) >= 1 else '',
                     department=departments[1] if len(departments) >= 2 else '',
                     group=departments[2] if len(departments) >= 3 else '',
@@ -112,7 +142,45 @@ class KaonaviConnector:
             )
             return ApiResult(success=True, data=formatted_user)
 
+    def get_profile_image_path(self, username):
+        '''
+        S3に格納されたその社員のプロフィール画像の絶対パス(https:xxx.jpg)を返す
+        S3にその社員のプロフィール画像が存在しない場合はno-image画像の絶対パスを返す
+        '''
+        s3_client = settings.STORAGE_CLIENT
+        params={
+            'Bucket': settings.AWS_S3_BUCKET_NAME,
+            'Key': f"all-profile-images/{username}.jpg"
+        }
+
+        if self.is_profile_image_exist(s3_client, params) == False:
+            params['Key'] = 'all-profile-images/no-image.jpg'
+
+        image_url = s3_client.generate_presigned_url('get_object',
+            Params=params,
+            ExpiresIn=settings.AWS_S3_EXPIRES_IN)
+
+        return image_url
+
+    def is_profile_image_exist(self, s3_client, params):
+        '''
+        S3にその社員のプロフィール画像が存在するかを確認する
+        存在している場合はTrue、存在しない場合はFalseを返す
+        '''
+        try:
+            s3_client.head_object(Bucket=params['Bucket'], Key=params['Key'])
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                return False
+
     def tags(self, kaonavi_user):
+        '''
+        勤続年数などの値を配列で返す
+        フロントでタグとして表示させることを目的としている
+        役職(role)など人によって空白となる項目に関しては、空白(None)の場合は返り値に含めずに、
+        存在する値のみレスポンスする
+        '''
         years_of_service = f"勤続{kaonavi_user['years_of_service']}"
         _role = next((custom_field for custom_field in kaonavi_user['custom_fields'] if custom_field['name'] == '役職'), NONE_AS_DEFAULT_VALUE)
         role = f"役職：{_role['values'][0]}" if _role is not None else None
@@ -131,6 +199,11 @@ class KaonaviConnector:
         return [value for value in _tags.values() if value is not None]
 
     def self_introduction_info(self, kaonavi_user):
+        '''
+        カオナビ上に保存されている自己紹介シート(カスタムフォーム)を取得し、フォーマットして返却する
+        各社員がカオナビ上で自由に編集できるシートになっているため、データが存在しない場合もある
+        データが存在しない場合は各項目のvalueを空文字として返却する
+        '''
         sheets = self.get_self_introduction_sheet()
         my_sheet = next((sheet for sheet in sheets['member_data'] if sheet['code'] == kaonavi_user['code']), NONE_AS_DEFAULT_VALUE)
         data = dict(
@@ -167,6 +240,14 @@ class KaonaviConnector:
             return data
 
     def create_or_update_self_introduction_info(self, user, params):
+        '''
+        カオナビ上の自己紹介シート(カスタムフォーム)の作成/編集をする
+        このメソッドへのエンドポイントは[PATCH] /users/:user_id だが、
+        このメソッド内でのカオナビへのリクエストエンドポイントは以下のように分岐する
+        ↓
+        該当社員の自己紹介シートが未作成の場合：[POST] /sheets/:sheet_id/add に対してリクエストし、新規作成
+        該当社員の自己紹介シートが存在する場合：[PATCH] /sheets/:sheet_id に対してリクエストし、更新
+        '''
         sheets = self.get_self_introduction_sheet()
         my_sheet = next((sheet for sheet in sheets['member_data'] if sheet['code'] == user.kaonavi_code), NONE_AS_DEFAULT_VALUE)
         request_json = self.build_self_introduction_json(user, params)
@@ -194,9 +275,15 @@ class KaonaviConnector:
         if response.ok:
             return ApiResult(success=True)
         else:
-            return ApiResult(success=False)
+            errors = response.json()['errors']
+            return ApiResult(success=False, errors=errors)
 
     def build_self_introduction_json(self, user, params):
+        '''
+        create_or_update_self_introduction_infoメソッドにて自己紹介シートを作成/更新する際の項目をjsonで返却する
+        以下カオナビAPIの「シート情報」の仕様に基づいてる
+        https://developer.kaonavi.jp/api/v2.0/index.html#tag/%E3%82%B7%E3%83%BC%E3%83%88%E6%83%85%E5%A0%B1/paths/~1sheets~1%7Bsheet_id%7D/patch
+        '''
         obj = {
             "member_data": [
                 {
@@ -204,7 +291,6 @@ class KaonaviConnector:
                     "records": [
                         {
                             "custom_fields": [
-                                {"id": NAME_FIELD_ID, "values": [user.username]},
                                 {"id": BIRTH_PLACE_FIELD_ID, "values": [params['birth_place']]},
                                 {"id": JOB_DESCRIPTION_FIELD_ID, "values": [params['job_description']]},
                                 {"id": CAREER_FIELD_ID, "values": [params['career']]},
