@@ -3,6 +3,7 @@ from django.conf import settings
 import requests
 from botocore.exceptions import ClientError
 from requests.auth import HTTPBasicAuth
+from django.core.paginator import EmptyPage, Paginator
 from ...models import User
 from ..api_result import ApiResult
 from .user_filter import UserFilter as KaonaviUserFilter
@@ -17,6 +18,9 @@ HOBBY_FIELD_ID = 289
 SPECIALTY_FIELD_ID = 290 # 特技
 STRENGTHS_FIELD_ID = 291 # アピールポイント
 MESSAGE_FIELD_ID = 292
+
+DEFAULT_PER_PAGE = 30
+DEFAULT_PAGE = 1
 
 class KaonaviConnector:
     def __init__(self):
@@ -76,8 +80,9 @@ class KaonaviConnector:
         kaonavi_user → カオナビ上の社員データ
         以下のようにgetでDBに問い合わせしているため、
         user = User.objects.get(kaonavi_code=kaonavi_user['code'])
-        カオナビ上に存在するが、djangoのDBに存在しないという場合にはエラーになる。
-        どちらにも存在する前提としている。
+        カオナビ上に存在するが、djangoのDBに存在しないという場合にはエラーになる
+        どちらにも存在する前提としている
+        処理の最後でページネーションの処理があり、per_pageとpageをフロントから受け取る
         '''
         kaonavi_users = KaonaviUserFilter(params, self.get_kaonavi_users()).call()
 
@@ -86,6 +91,12 @@ class KaonaviConnector:
         else:
             self_intro_sheets = self.get_self_introduction_sheet()
             formatted_users = []
+
+            # ページ指定せずにアクセスしてきた場合は、最初の30件のみを返却する
+            # 初回アクセス時に毎回全件取得するのはパフォーマンス的によくないため
+            if params.get('page') is None:
+                kaonavi_users = kaonavi_users[:30]
+
             for kaonavi_user in kaonavi_users:
                 user = User.objects.get(kaonavi_code=kaonavi_user['code'])
                 departments = kaonavi_user['department']['names']
@@ -112,7 +123,29 @@ class KaonaviConnector:
                         job_description=job_description
                     )
                 )
-            return ApiResult(success=True, data=formatted_users)
+
+            selected_per_page = int(params['per_page']) if params.get('per_page') is not None else DEFAULT_PER_PAGE
+            selected_page = int(params['page']) if params.get('page') is not None else DEFAULT_PAGE
+
+            paginator = Paginator(formatted_users, selected_per_page)
+
+            try:
+                page = paginator.page(selected_page)
+                data = dict(
+                    records=page.object_list,
+                    limit=selected_per_page,
+                    total_pages=paginator.num_pages,
+                    total_count=paginator.count,
+                    current_page=selected_page,
+                    has_next_page=page.has_next(),
+                    next_page_number=page.next_page_number() if page.has_next() else None,
+                    has_previous_page=page.has_previous(),
+                    previous_page_number=page.previous_page_number() if page.has_previous() else None
+                )
+
+                return ApiResult(success=True, data=data)
+            except EmptyPage:
+                return ApiResult(success=False, errors=['指定されたページは存在しません'])
 
     def get_user(self, user_id, kaonavi_code):
         '''
