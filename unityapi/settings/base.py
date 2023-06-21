@@ -26,8 +26,6 @@ STORAGE_CLIENT = boto3.client('s3',
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
             region_name=AWS_S3_REGION_NAME)
 
-DEBUG = env.bool('DEBUG', default=False)
-
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost'])
 CORS_ORIGIN_WHITELIST = env.list('CORS_ORIGIN_WHITELIST', default=[])
 
