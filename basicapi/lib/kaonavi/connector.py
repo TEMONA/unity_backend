@@ -92,11 +92,6 @@ class KaonaviConnector:
             self_intro_sheets = self.get_self_introduction_sheet()
             formatted_users = []
 
-            # ページ指定せずにアクセスしてきた場合は、最初の30件のみを返却する
-            # 初回アクセス時に毎回全件取得するのはパフォーマンス的によくないため
-            if params.get('page') is None:
-                kaonavi_users = kaonavi_users[:30]
-
             for kaonavi_user in kaonavi_users:
                 user = User.objects.get(kaonavi_code=kaonavi_user['code'])
                 departments = kaonavi_user['department']['names']
@@ -138,9 +133,9 @@ class KaonaviConnector:
                     total_count=paginator.count,
                     current_page=selected_page,
                     has_next_page=page.has_next(),
-                    next_page_number=page.next_page_number() if page.has_next() else None,
+                    next_page=page.next_page_number() if page.has_next() else None,
                     has_previous_page=page.has_previous(),
-                    previous_page_number=page.previous_page_number() if page.has_previous() else None
+                    previous_page=page.previous_page_number() if page.has_previous() else None
                 )
 
                 return ApiResult(success=True, data=data)
