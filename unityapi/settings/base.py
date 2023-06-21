@@ -4,13 +4,11 @@ from datetime import timedelta
 import os
 import boto3
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env()
-root = environ.Path(os.path.join(BASE_DIR, 'secrets'))
-# env.read_env(root('.env.prod'))
-# env.read_env(root('.env.dev'))
-env.read_env(root('.env'))
+secrets = environ.Path(os.path.join(BASE_DIR, 'secrets'))
+env.read_env(secrets('.env'))
 
 SECRET_KEY = env.str('SECRET_KEY')
 
@@ -30,7 +28,7 @@ STORAGE_CLIENT = boto3.client('s3',
 
 DEBUG = env.bool('DEBUG', default=False)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost'])
 CORS_ORIGIN_WHITELIST = env.list('CORS_ORIGIN_WHITELIST', default=[])
 
 CORS_ALLOW_HEADERS = (
@@ -45,25 +43,6 @@ CORS_ALLOW_HEADERS = (
     'x-requested-with',
     'access-control-allow-origin',
 )
-
-# 本番環境用
-# LOGGING = {
-#     "version": 1,
-#     "disable_existing_loggers": False,
-#     "formatters": {"simple": {"format": "%(asctime)s [%(levelname)s] %(message)s"}},
-#     "handlers": {
-#         "file": {
-#             "level": "INFO",
-#             "class": "logging.FileHandler",
-#             "filename": "/var/log/django/app.log",
-#             "formatter": "simple",
-#         },
-#     },
-#     "loggers": {
-#         "django": {"handlers": ["file"], "level": "INFO", "propagate": False,},
-#         "": {"handlers": ["file"], "level": "INFO", "propagate": False,},
-#     },
-# }
 
 INSTALLED_APPS = [
     'django.contrib.admin',

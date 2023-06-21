@@ -3,6 +3,7 @@ basicapi/lib/__pycache__/
 basicapi/migrations/__pycache__/
 unityapi/__pycache__/
 basicapi/lib/kaonavi/__pycache__/
+unityapi/settings/__pycache__/
 media/
 secrets/
 db.sqlite3
