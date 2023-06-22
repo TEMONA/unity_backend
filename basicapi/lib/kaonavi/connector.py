@@ -128,14 +128,16 @@ class KaonaviConnector:
                 page = paginator.page(selected_page)
                 data = dict(
                     records=page.object_list,
-                    limit=selected_per_page,
-                    total_pages=paginator.num_pages,
-                    total_count=paginator.count,
-                    current_page=selected_page,
-                    has_next_page=page.has_next(),
-                    next_page=page.next_page_number() if page.has_next() else None,
-                    has_previous_page=page.has_previous(),
-                    previous_page=page.previous_page_number() if page.has_previous() else None
+                    meta=dict(
+                        limit=selected_per_page,
+                        total_pages=paginator.num_pages,
+                        total_count=paginator.count,
+                        current_page=selected_page,
+                        has_next_page=page.has_next(),
+                        next_page=page.next_page_number() if page.has_next() else None,
+                        has_previous_page=page.has_previous(),
+                        previous_page=page.previous_page_number() if page.has_previous() else None
+                    )
                 )
 
                 return ApiResult(success=True, data=data)
