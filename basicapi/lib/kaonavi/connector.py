@@ -129,7 +129,7 @@ class KaonaviConnector:
                 data = dict(
                     records=page.object_list,
                     meta=dict(
-                        limit=selected_per_page,
+                        per_page=selected_per_page,
                         total_pages=paginator.num_pages,
                         total_count=paginator.count,
                         current_page=selected_page,
