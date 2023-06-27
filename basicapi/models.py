@@ -39,6 +39,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     kaonavi_code = models.CharField(max_length=10, unique=True)
     chatwork_id = models.CharField(max_length=50, unique=True, null=True)
+    created_at = models.DateTimeField(verbose_name="登録日時", auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name="更新日時", auto_now=True)
 
     objects = UserManager()
 
