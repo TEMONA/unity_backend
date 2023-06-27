@@ -41,6 +41,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     chatwork_id = models.CharField(max_length=50, unique=True, null=True)
     created_at = models.DateTimeField(verbose_name="登録日時", auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name="更新日時", auto_now=True)
+    is_quit = models.BooleanField(default=False)
 
     objects = UserManager()
 

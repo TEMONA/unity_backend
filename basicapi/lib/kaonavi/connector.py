@@ -94,6 +94,10 @@ class KaonaviConnector:
 
             for kaonavi_user in kaonavi_users:
                 user = User.objects.get(kaonavi_code=kaonavi_user['code'])
+                # 退職者はレスポンスに含めない
+                if user.is_quit:
+                    continue
+
                 departments = kaonavi_user['department']['names']
                 role = next((custom_field for custom_field in kaonavi_user['custom_fields'] if custom_field['name'] == '役職'), NONE_AS_DEFAULT_VALUE)
                 my_sheet = next((sheet for sheet in self_intro_sheets['member_data'] if sheet['code'] == kaonavi_user['code']), NONE_AS_DEFAULT_VALUE)
