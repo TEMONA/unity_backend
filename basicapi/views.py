@@ -5,7 +5,7 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework import status
-from .models import User, Profile, LunchRequests
+from .models import User, UserActivateTokens, Profile, LunchRequests
 from .serializers import UserSerializer, ProfileSerializer, LunchRequestsSerializer
 from django.db.models import Q
 from rest_framework.response import Response
@@ -90,3 +90,19 @@ class MyLunchRequestsListView(RetrieveUpdateAPIView):
     def get_queryset(self):
         user_id = self.kwargs['pk']
         return self.queryset.filter(applicant=user_id)
+
+from .models import UserActivateTokens
+from django.http import HttpResponse
+
+
+def activate_user(request, activate_token):
+    activated_user = UserActivateTokens.objects.activate_user_by_token(
+        activate_token)
+    if hasattr(activated_user, 'is_active'):
+        if activated_user.is_active:
+            message = 'ユーザーのアクティベーションが完了しました'
+        if not activated_user.is_active:
+            message = 'アクティベーションが失敗しています。管理者に問い合わせてください'
+    if not hasattr(activated_user, 'is_active'):
+        message = 'エラーが発生しました'
+    return HttpResponse(message)

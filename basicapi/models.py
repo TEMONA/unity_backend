@@ -81,7 +81,7 @@ def publish_activate_token(sender, instance, **kwargs):
             expired_at=datetime.now()+timedelta(days=settings.ACTIVATION_EXPIRED_DAYS),
         )
         subject = 'Please Activate Your Account'
-        message = f'URLにアクセスしてアカウント登録を完了してください。\n {settings.MY_URL}/api/users/{user_activate_token.token_id}'
+        message = f'URLにアクセスしてユーザーアクティベーション。\n http://127.0.0.1:8000/users/{user_activate_token.activate_token}/activation/'
     if instance.is_active:
         subject = 'Activated! Your Account!'
         message = 'ユーザーが使用できるようになりました'
