@@ -8,7 +8,6 @@ from .views import MyProfileListView
 # from .views import ProfileListView
 from .views import LunchRequestsViewSet
 from .views import MyLunchRequestsListView
-from .views import activate_user
 
 app_name = 'basicapi'
 
@@ -23,6 +22,5 @@ urlpatterns = [
     path('users/profile/<uuid:pk>/', MyProfileListView.as_view(), name='my-profile'),
     # path('users/profile/<uuid:pk>/', ProfileListView.as_view(), name='users-profile'),
     path('lunch-requests/<uuid:pk>/', MyLunchRequestsListView.as_view(), name='my-lunch-requests'),
-    path('users/<uuid:activate_token>/activation/', activate_user, name='users-activation'),
     path('', include(router.urls)),
 ]

@@ -7,11 +7,8 @@ import boto3
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env()
-root = environ.Path(BASE_DIR / 'secrets')
-# 本番環境用
-# env.read_env(root('.env.prod'))
-# 開発環境用
-env.read_env(root('.env.dev'))
+secrets = environ.Path(os.path.join(BASE_DIR, 'secrets'))
+env.read_env(secrets('.env'))
 
 SECRET_KEY = env.str('SECRET_KEY')
 
@@ -29,8 +26,8 @@ STORAGE_CLIENT = boto3.client('s3',
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
             region_name=AWS_S3_REGION_NAME)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS',default=['localhost'])
-CORS_ORIGIN_WHITELIST = env.list('CORS_ORIGIN_WHITELIST',default=[])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost'])
+CORS_ORIGIN_WHITELIST = env.list('CORS_ORIGIN_WHITELIST', default=[])
 
 CORS_ALLOW_HEADERS = (
     'accept',
@@ -121,12 +118,7 @@ ACTIVATION_EXPIRED_DAYS = 3
 
 #ローカル確認用
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = env.str('EMAIL_HOST')
-EMAIL_PORT = env.int('EMAIL_PORT')
-DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL')
-EMAIL_HOST_USER = env.str('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD')
-# EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 SENDGRID_API_KEY = env('SENDGRID_API_KEY')
 SENDGRID_SANDBOX_MODE_IN_DEBUG = True
 SENDGRID_TRACK_CLICKS_PLAIN = False

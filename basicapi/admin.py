@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Profile, UserActivateTokens
+from .models import User, Profile
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 
@@ -37,9 +37,5 @@ class ProfileAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
     list_display = ('__str__', 'user', 'tweet', 'from_last_login', 'created_at')
 
-class UserActivateTokensAdmin(admin.ModelAdmin):
-    list_display = ('token_id', 'user', 'activate_token', 'expired_at')
-
 admin.site.register(User, UserAdmin)
 admin.site.register(Profile, ProfileAdmin)
-admin.site.register(UserActivateTokens, UserActivateTokensAdmin)
