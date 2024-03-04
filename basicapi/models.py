@@ -5,8 +5,8 @@ import uuid
 from datetime import datetime, timedelta
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.core.mail import send_mail
+# from django.dispatch import receiver
+# from django.core.mail import send_mail
 
 class UserManager(BaseUserManager):
 
@@ -50,46 +50,46 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-class UserActivateTokensManager(models.Manager):
+# class UserActivateTokensManager(models.Manager):
 
-    def activate_user_by_token(self, activate_token):
-        user_activate_token = self.filter(
-            activate_token=activate_token,
-            expired_at__gte=datetime.now() # __gte = greater than equal
-        ).first()
-        if hasattr(user_activate_token, 'user'):
-            user = user_activate_token.user
-            user.is_active = True
-            user.save()
-            return user
+#     def activate_user_by_token(self, activate_token):
+#         user_activate_token = self.filter(
+#             activate_token=activate_token,
+#             expired_at__gte=datetime.now() # __gte = greater than equal
+#         ).first()
+#         if hasattr(user_activate_token, 'user'):
+#             user = user_activate_token.user
+#             user.is_active = True
+#             user.save()
+#             return user
 
 
-class UserActivateTokens(models.Model):
+# class UserActivateTokens(models.Model):
 
-    token_id = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    activate_token = models.UUIDField(default=uuid.uuid4)
-    expired_at = models.DateTimeField()
+#     token_id = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+#     activate_token = models.UUIDField(default=uuid.uuid4)
+#     expired_at = models.DateTimeField()
 
-    objects = UserActivateTokensManager()
+#     objects = UserActivateTokensManager()
 
-@receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def publish_activate_token(sender, instance, **kwargs):
-    if not instance.is_active:
-        user_activate_token = UserActivateTokens.objects.create(
-            user=instance,
-            expired_at=datetime.now()+timedelta(days=settings.ACTIVATION_EXPIRED_DAYS),
-        )
-        subject = 'Please Activate Your Account'
-        message = f'URLにアクセスしてアカウント登録を完了してください。\n {settings.MY_URL}/api/users/{user_activate_token.token_id}'
-    if instance.is_active:
-        subject = 'Activated! Your Account!'
-        message = 'ユーザーが使用できるようになりました'
-    from_email = settings.DEFAULT_FROM_EMAIL
-    recipient_list = [
-        instance.email,
-    ]
-    send_mail(subject, message, from_email, recipient_list)
+# @receiver(post_save, sender=settings.AUTH_USER_MODEL)
+# def publish_activate_token(sender, instance, **kwargs):
+#     if not instance.is_active:
+#         user_activate_token = UserActivateTokens.objects.create(
+#             user=instance,
+#             expired_at=datetime.now()+timedelta(days=settings.ACTIVATION_EXPIRED_DAYS),
+#         )
+#         subject = 'Please Activate Your Account'
+#         message = f'URLにアクセスしてアカウント登録を完了してください。\n {settings.MY_URL}/api/users/{user_activate_token.token_id}'
+#     if instance.is_active:
+#         subject = 'Activated! Your Account!'
+#         message = 'ユーザーが使用できるようになりました'
+#     from_email = settings.DEFAULT_FROM_EMAIL
+#     recipient_list = [
+#         instance.email,
+#     ]
+#     send_mail(subject, message, from_email, recipient_list)
 
 def top_image_upload_path(instance, filename):
     ext = filename.split('.')[-1]
