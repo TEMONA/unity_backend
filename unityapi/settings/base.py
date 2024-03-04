@@ -102,8 +102,6 @@ SIMPLE_JWT = {
 
 AUTH_USER_MODEL = 'basicapi.User'
 
-ACTIVATION_EXPIRED_DAYS = 3
-
 # SendGrid
 #本番環境用
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -155,8 +153,8 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = 'static/'
-STATIC_ROOT = str(BASE_DIR / 'staticfiles')
+# STATIC_URL = 'static/'
+# STATIC_ROOT = str(BASE_DIR / 'staticfiles')
 
 # 開発環境
 MEDIA_URL = '/media/'
